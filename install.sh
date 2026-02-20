@@ -77,3 +77,22 @@ mkfs.ext4 /dev/mapper/vault_tmp
 cryptsetup close vault_tmp
 
 echo -e "\n\033[1;32m>>> Étape 2 terminée : Le stockage est prêt et sécurisé.\033[0m"
+
+echo -e "\n\033[1;36m>>> ÉTAPE 3 : MONTAGES ET INSTALLATION DES PAQUETS\033[0m"
+
+mount /dev/$VG/lv_root /mnt
+mkdir -p /mnt/{boot,var/lib/virtualbox,home/shared}
+mount ${DISK}1 /mnt/boot
+mount /dev/$VG/lv_vbox /mnt/var/lib/virtualbox
+mount /dev/$VG/lv_shared /mnt/home/shared
+swapon /dev/$VG/lv_swap
+
+echo " -> Installation des paquets (Patience...)"
+pacstrap /mnt base linux linux-firmware lvm2 networkmanager sudo grub efibootmgr \
+    vim gcc make gdb fastfetch ranger htop git wget curl zsh \
+    xorg-server i3-wm i3status dmenu xfce4-terminal \
+    virtualbox virtualbox-host-modules-arch
+
+genfstab -U /mnt >> /mnt/etc/fstab
+
+echo -e "\n\033[1;32m>>> Étape 3 terminée.\033[0m"
