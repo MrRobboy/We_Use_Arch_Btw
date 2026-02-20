@@ -96,3 +96,52 @@ pacstrap /mnt base linux linux-firmware lvm2 networkmanager sudo grub efibootmgr
 genfstab -U /mnt >> /mnt/etc/fstab
 
 echo -e "\n\033[1;32m>>> Étape 3 terminée.\033[0m"
+
+echo -e "\n\033[1;36m>>> ÉTAPE 4 : CONFIGURATION INTERNE ET RAPPORT\033[0m"
+
+cat <<EOF > /mnt/root/setup.sh
+#!/bin/bash
+
+ln -sf /usr/share/zoneinfo/Europe/Paris /etc/localtime
+hwclock --systohc
+echo "fr_FR.UTF-8 UTF-8" > /etc/locale.gen
+locale-gen
+echo "LANG=fr_FR.UTF-8" > /etc/locale.conf
+echo "KEYMAP=fr-latin1" > /etc/vconsole.conf
+echo "$HOST" > /etc/hostname
+
+sed -i 's/^HOOKS=.*/HOOKS=(base udev autodetect modconf kms keyboard keymap consolefont block encrypt lvm2 filesystems fsck)/' /etc/mkinitcpio.conf
+mkinitcpio -P
+UUID=\$(blkid -s UUID -o value ${DISK}2)
+sed -i "s|^GRUB_CMDLINE_LINUX_DEFAULT=.*|GRUB_CMDLINE_LINUX_DEFAULT=\"loglevel=3 quiet cryptdevice=UUID=\$UUID:cryptlvm root=/dev/$VG/lv_root\"|" /etc/default/grub
+grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB --removable
+grub-mkconfig -o /boot/grub/grub.cfg
+
+groupadd shared_memes
+useradd -m -G wheel,shared_memes,vboxusers -s /bin/zsh collegue
+echo "collegue:$PASS" | chpasswd
+useradd -m -G shared_memes -s /bin/zsh fils
+echo "fils:$PASS" | chpasswd
+sed -i 's/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/' /etc/sudoers
+
+chown root:shared_memes /home/shared
+chmod 2770 /home/shared
+
+REPORT="/root/rendu_final.txt"
+{
+  echo "=== 1. LSBLK -F ==="
+  lsblk -f
+  echo -e "\n=== 2. PASSWD / GROUP / FSTAB / MTAB ==="
+  cat /etc/passwd /etc/group /etc/fstab /etc/mtab
+  echo -e "\n=== 3. HOSTNAME ==="
+  echo \$HOSTNAME
+  echo -e "\n=== 4. PACKAGES INSTALLED ==="
+  grep -i installed /var/log/pacman.log
+} > "\$REPORT"
+EOF
+
+chmod +x /mnt/root/setup.sh
+arch-chroot /mnt /root/setup.sh
+rm /mnt/root/setup.sh
+
+echo -e "\n\033[1;32m>>> INSTALLATION TERMINÉE ! Fichier de rendu créé dans /root/rendu_final.txt\033[0m"
