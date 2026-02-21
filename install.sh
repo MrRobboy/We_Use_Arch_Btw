@@ -110,6 +110,8 @@ echo "LANG=fr_FR.UTF-8" > /etc/locale.conf
 echo "KEYMAP=fr-latin1" > /etc/vconsole.conf
 echo "$HOST" > /etc/hostname
 
+mkdir -p /etc/NetworkManager/conf.d
+printf "[connection]\nipv6.method=ignore\n" > /etc/NetworkManager/conf.d/ipv6-ignore.conf
 systemctl enable NetworkManager
 
 sed -i 's/^HOOKS=.*/HOOKS=(base udev autodetect modconf kms keyboard keymap consolefont block encrypt lvm2 filesystems fsck)/' /etc/mkinitcpio.conf
@@ -180,3 +182,5 @@ arch-chroot /mnt /root/setup.sh
 rm /mnt/root/setup.sh
 
 echo -e "\n\033[1;32m>>> INSTALLATION TERMINÉE ! Fichier de rendu créé dans /root/rendu_final.txt\033[0m"
+
+echo -e "\n\033[1;32m>>> NOW YOU CAN USE ARCH BTW !\033[0m"
