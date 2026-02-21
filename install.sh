@@ -114,13 +114,18 @@ mkdir -p /etc/NetworkManager/conf.d
 printf "[connection]\nipv6.method=ignore\n" > /etc/NetworkManager/conf.d/ipv6-ignore.conf
 systemctl enable NetworkManager
 
+echo "GRUB_ENABLE_CRYPTODISK=y" >> /etc/default/grub
+
 sed -i 's/^HOOKS=.*/HOOKS=(base udev autodetect modconf kms keyboard keymap consolefont block encrypt lvm2 filesystems fsck)/' /etc/mkinitcpio.conf
 mkinitcpio -P
+
 UUID=\$(blkid -s UUID -o value ${DISK}2)
 sed -i "s|^GRUB_CMDLINE_LINUX_DEFAULT=.*|GRUB_CMDLINE_LINUX_DEFAULT=\"loglevel=3 quiet cryptdevice=UUID=\$UUID:cryptlvm root=/dev/$VG/lv_root\"|" /etc/default/grub
+
 grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB --removable
 grub-mkconfig -o /boot/grub/grub.cfg
 
+# --- UTILISATEURS ---
 groupadd shared_memes
 useradd -m -G wheel,shared_memes,vboxusers -s /bin/zsh collegue
 echo "collegue:$PASS" | chpasswd
