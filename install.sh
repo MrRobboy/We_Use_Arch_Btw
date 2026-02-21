@@ -11,7 +11,7 @@ cat <<'EOF'
 ╚███╔███╔╝███████╗    ╚██████╔╝███████║███████╗    ██║  ██║██║  ██║╚██████╗██║  ██║
  ╚══╝╚══╝ ╚══════╝     ╚═════╝ ╚══════╝╚══════╝    ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
 
-                                 BTW
+                                  BTW
 
 ==============================================================================
 EOF
@@ -90,7 +90,7 @@ swapon /dev/$VG/lv_swap
 echo " -> Installation des paquets (Patience...)"
 pacstrap /mnt base linux linux-firmware lvm2 networkmanager sudo grub efibootmgr \
     vim gcc make gdb fastfetch ranger htop git wget curl zsh \
-    xorg-server i3-wm i3status dmenu xfce4-terminal \
+    xorg-server xorg-xinit i3-wm i3status dmenu xfce4-terminal \
     virtualbox virtualbox-host-modules-arch
 
 genfstab -U /mnt >> /mnt/etc/fstab
@@ -110,6 +110,8 @@ echo "LANG=fr_FR.UTF-8" > /etc/locale.conf
 echo "KEYMAP=fr-latin1" > /etc/vconsole.conf
 echo "$HOST" > /etc/hostname
 
+systemctl enable NetworkManager
+
 sed -i 's/^HOOKS=.*/HOOKS=(base udev autodetect modconf kms keyboard keymap consolefont block encrypt lvm2 filesystems fsck)/' /etc/mkinitcpio.conf
 mkinitcpio -P
 UUID=\$(blkid -s UUID -o value ${DISK}2)
@@ -126,6 +128,39 @@ sed -i 's/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/' /etc/sudoers
 
 chown root:shared_memes /home/shared
 chmod 2770 /home/shared
+
+for user in collegue fils; do
+    UHOME="/home/\$user"
+    mkdir -p "\$UHOME/.config/i3"
+    cat <<I3CONF > "\$UHOME/.config/i3/config"
+set \\\$mod Mod4
+font pango:monospace 10
+floating_modifier \\\$mod
+bindsym \\\$mod+Return exec xfce4-terminal
+bindsym \\\$mod+Shift+q kill
+bindsym \\\$mod+d exec dmenu_run
+bindsym \\\$mod+Left focus left
+bindsym \\\$mod+Down focus down
+bindsym \\\$mod+Up focus up
+bindsym \\\$mod+Right focus right
+bindsym \\\$mod+Shift+e exec i3-msg exit
+bar {
+    status_command i3status
+    colors {
+        background #282a36
+        statusline #f8f8f2
+    }
+}
+I3CONF
+    echo "exec i3" > "\$UHOME/.xinitrc"
+    cat <<ZSHCONF >> "\$UHOME/.zshrc"
+if [[ -z \\\$DISPLAY && \\\$(tty) == /dev/tty1 ]]; then
+    exec startx
+fi
+fastfetch
+ZSHCONF
+    chown -R \$user:\$user "\$UHOME"
+done
 
 REPORT="/root/rendu_final.txt"
 {
